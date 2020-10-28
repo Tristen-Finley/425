@@ -39,7 +39,7 @@ for subreddit in subs:
             nlocked+=1;
 
     for comment in commentdata:
-        if(comment['author'] == 'removed'):
+        if(comment['author'] == '[removed]' or comment['author'] == '[deleted]'):
             nremoved += 1
 
     print("Number of locked posts: {}".format(nlocked))
