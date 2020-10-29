@@ -1,24 +1,43 @@
 import requests
 from datetime import datetime
 import time
+    
+subs = ['gatesopencomeonin','gatekeeping'] #list of subs to pull from (large subs take forever)
+posts = 10 #how many posts we gather, sorted by moist upvotes
+size = 100
+if posts < 100:
+    size = posts
 
-subs = ['lemonjelly'] #list of subs to pull from (large subs take forever)
-day = '1' #how many days back we look
-url = "https://api.pushshift.io/reddit/{}/search/?subreddit={}&size=100&sort=desc&after={}d&before="
-object_type = ["submission", "comment"]
+posturl = "https://api.pushshift.io/reddit/submission/search/?subreddit={}&sort_type=score&size={}&score=<"
+commenturl = "https://api.pushshift.io/reddit/comment/search/?subreddit={}&size=100&link_id={}&before="
 start_time = datetime.utcnow()
 
 for subreddit in subs:
 
-    nlocked=0
-    nremoved=0
     submissiondata = []
+    comments = []
     commentdata = []
-    for s in object_type:
+    request_type = 'submission'
+    score = 1000000
+    while(len(submissiondata) < posts):
+        new_url = posturl.format(subreddit,size)+str(score)
+        res = requests.get(new_url)
+        print(new_url)
+        try:
+            dat = res.json()['data']
+        except ValueError:
+            print("API Error, trying again")
+            continue
+        if(len(dat) == 0):
+            break
+        submissiondata.extend(dat)
+        score = dat[-1]['score']
+
+    for post in submissiondata:
         prev_epoch = int(start_time.timestamp())
+        i = 0
         while True:
-            time.sleep(1) #have to wait inbetween api calls so there is no errors
-            new_url = url.format(s, subreddit, day)+str(prev_epoch)
+            new_url = commenturl.format(subreddit, post['id']) + str(prev_epoch)
             res = requests.get(new_url)
             print(new_url)
             try:
@@ -27,23 +46,16 @@ for subreddit in subs:
                 print("API Error, trying again")
                 continue
             if(len(dat) == 0):
-                break
-            if(s == 'comment'):
-                commentdata.extend(dat)
-            elif(s == 'submission'):
-                submissiondata.extend(dat)
-            prev_epoch=dat[-1]['created_utc']
+               break
+            comments.extend(dat)
+            commentdata.extend(comments)
+            prev_epoch = dat[-1]['created_utc']
+        i += 1
+        
+    print(len(submissiondata))
+    print(len(commentdata))
 
-    for post in submissiondata:
-        if(post['locked'] == True):
-            nlocked+=1;
+    for comments in commentdata:
+        print(len(comments))
 
-    for comment in commentdata:
-        if(comment['author'] == '[removed]' or comment['author'] == '[deleted]'):
-            nremoved += 1
 
-    print("Number of locked posts: {}".format(nlocked))
-    print("Number of removed comments: {}".format(nremoved))
-
-print(len(submissiondata))
-print(len(commentdata))
