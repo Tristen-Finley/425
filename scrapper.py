@@ -9,13 +9,12 @@ if posts < 100:
     size = posts
 
 posturl = "https://api.pushshift.io/reddit/submission/search/?subreddit={}&sort_type=score&size={}&score=<"
-commenturl = "https://api.pushshift.io/reddit/comment/search/?subreddit={}&size=100&link_id={}&before="
+commenturl = "https://api.pushshift.io/reddit/comment/search/?subreddit={}&size=1000&link_id={}&before="
 start_time = datetime.utcnow()
 
 for subreddit in subs:
 
     submissiondata = []
-    comments = []
     commentdata = []
     request_type = 'submission'
     score = 1000000
@@ -33,8 +32,10 @@ for subreddit in subs:
         submissiondata.extend(dat)
         score = dat[-1]['score']
 
+    print(len(submissiondata))
     for post in submissiondata:
         prev_epoch = int(start_time.timestamp())
+        comments = []
         while True:
             new_url = commenturl.format(subreddit, post['id']) + str(prev_epoch)
             res = requests.get(new_url)
@@ -48,12 +49,9 @@ for subreddit in subs:
                break
             comments.extend(dat)
             prev_epoch = dat[-1]['created_utc']
-        commentdata.extend(comments)
+        commentdata.append(comments)
         
-    print(len(submissiondata))
     print(len(commentdata))
 
     for comments in commentdata:
         print(len(comments))
-
-
