@@ -35,7 +35,6 @@ for subreddit in subs:
 
     for post in submissiondata:
         prev_epoch = int(start_time.timestamp())
-        i = 0
         while True:
             new_url = commenturl.format(subreddit, post['id']) + str(prev_epoch)
             res = requests.get(new_url)
@@ -48,9 +47,8 @@ for subreddit in subs:
             if(len(dat) == 0):
                break
             comments.extend(dat)
-            commentdata.extend(comments)
             prev_epoch = dat[-1]['created_utc']
-        i += 1
+        commentdata.extend(comments)
         
     print(len(submissiondata))
     print(len(commentdata))
