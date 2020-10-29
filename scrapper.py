@@ -3,13 +3,15 @@
 
 #WARNING: Program can take a very long time to run if you are asking for more than 1 or 2 posts, because
 #the api can only grab 100 comments at a time and some have up to 3k comments (30 api calls) and api is slower than christmas
+
+#WARNING: The api is sometimes unreliable since data is not always recored correctly. WE end up throwing out some data 
 import requests
 from datetime import datetime
 import time
 import csv
     
 subs = ['gatesopencomeonin', 'gatekeeping'] #list of subs to pull from (large subs take forever)
-posts = 1 #how many posts we gather for each sub, sorted by most upvotes (top posts)
+posts = 10 #how many posts we gather for each sub, sorted by most upvotes (top posts)
 size = 100
 if posts < 100:
     size = posts
@@ -39,9 +41,18 @@ posturl = "https://api.pushshift.io/reddit/submission/search/?subreddit={}&sort_
 commenturl = "https://api.pushshift.io/reddit/comment/search/?subreddit={}&size=1000&link_id={}&before="
 start_time = datetime.utcnow()
 
+
+maxsubkarma = []
+for subreddit in subs:
+    new_url = posturl.format(subreddit,size)+str(1000000)
+    res = requests.get(new_url)
+    print(new_url)
+    dat = res.json()['data']
+    maxsubkarma.append(dat[0]['score'])
+
 #gather data
 for subreddit in subs:
-    score = 1000000
+    score = min(maxsubkarma) + 1
     num_posts = 0
     while(num_posts < posts):
         new_url = posturl.format(subreddit,size)+str(score)
@@ -137,35 +148,35 @@ for post in submissiondata:
     
 #write features to csv file
 with open('postdata.csv', 'w', newline = '') as f:
-    fieldnames = ['% deleted comments',
-                  'avg comment karma',
-                  'total post karma',
-                  'comment to karma rate',
-                  'nice words per comment',
-                  'negative words per comment' ,
-                  'general words per comment',
-                  'avg words per comment',
-                  'avg word len',
-                  'comments per min',
-                  'karma per min',
-                  'sub',
-                  'post id']
+    fieldnames = ['Percdeleted',
+                  'AvgComKarma',
+                  'TotalKarma',
+                  'ComUpRatio',
+                  'PosWordRate',
+                  'NegWordRate' ,
+                  'GenWordRate',
+                  'AvgComLen',
+                  'AvgWordLen',
+                  'AvgCommTime',
+                  'VoteTime',
+                  'post id',
+                  'sub']
     write = csv.DictWriter(f, fieldnames = fieldnames)
     write.writeheader()
 
     i = 0
     for post in submissiondata:
-        write.writerow({'% deleted comments' : percent_deleted[i],
-                       'avg comment karma' : avg_comment_karma[i],
-                       'total post karma' : total_post_karma[i],
-                       'comment to karma rate' : comment_upvote_rate[i],
-                       'nice words per comment' : nice_words_per_comment[i],
-                       'negative words per comment' : negative_words_per_comment[i],
-                       'general words per comment' : general_words_per_comment[i],
-                       'avg words per comment' : avg_comment_words[i],
-                       'avg word len' : avg_word_len[i],
-                       'comments per min' : comments_per_min[i],
-                       'karma per min' : karma_per_min[i],
-                        'sub' : target_label[i],
-                        'post id' : post_id[i]})
+        write.writerow({'Percdeleted' :percent_deleted[i],
+                  'AvgComKarma' : avg_comment_karma[i],
+                  'TotalKarma' : total_post_karma[i],
+                  'ComUpRatio' :comment_upvote_rate[i],
+                  'PosWordRate' : nice_words_per_comment[i],
+                  'NegWordRate' : negative_words_per_comment[i],
+                  'GenWordRate' : general_words_per_comment[i],
+                  'AvgComLen' : avg_comment_words[i],
+                  'AvgWordLen' : avg_word_len[i],
+                  'AvgCommTime' : comments_per_min[i],
+                  'VoteTime' : karma_per_min[i],
+                  'post id' : post_id[i],
+                  'sub' : target_label[i]})
         i += 1
