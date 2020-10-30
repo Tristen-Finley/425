@@ -20,7 +20,7 @@ commentdata = []
 
 #list for or word checks
 nice_words = ['nice', 'good', 'okay', 'too', 'valid', 'like', 'wholesome']
-bad_words = ['cant', 'cant', 'wont', 'fuck', 'shit', 'cuck']
+bad_words = ['bad', 'terrible', 'cant', 'cant', 'wont', 'fuck', 'shit', 'cuck']
 general_words = ['all', 'any', 'every']
 
 percent_deleted = []
