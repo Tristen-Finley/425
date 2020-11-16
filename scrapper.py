@@ -10,6 +10,7 @@ import time
 import csv
 import praw
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from praw.exceptions import APIException
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -34,17 +35,14 @@ avg_word_len = []
 target_label = []
 avg_vader_sentiment = []
 post_id = []
-#revevant words found from wordcloud generator : https://sandhoefner.github.io/reddit/
-contains_isnt = []
+#relevant words found from wordcloud generator : https://sandhoefner.github.io/reddit/
 contains_cant = []
 contains_dont = []
 contains_everyone = []
 contains_anyone = []
-contains_wholesome = []
 contains_happy = []
 contains_love = []
 
-#gather data
 for sub in subs:
     subreddit = reddit.subreddit(sub)
     p = { "t" : "year" }
@@ -52,7 +50,7 @@ for sub in subs:
     i = 0
     for post in posts:
         score = post.score
-        num_comments = post.num_comments
+        num_comments = 0
         sentiment = 0
         comment_karma = 0
         num_deleted = 0
@@ -69,21 +67,39 @@ for sub in subs:
         num_words = 0
         num_characters = 0
         
-        post.comments.replace_more(limit=None)
+        #error handler for API calls
+        while True:
+            try:
+                post.comments.replace_more(limit=None, threshold=0)
+                break
+            except APIException as e:
+                print("Handling replace_more exception")
+                sleep(1)
+
+        #some deleted commetns arent archived quickly enough to be stored in API listing,
+        #we are only ocunting what we can find, except for num_deleted which is a metric
+        #we must measure with full accuracy
+        num_deleted = abs(post.num_comments - len(post.comments.list()))
+        num_comments = len(post.comments.list())
+        archived_deleted = 0
+        
         for comment in post.comments.list():
 
+            #last comment time used to claculate the total time the post is "active"
             if(comment.created > last_comment):
                 last_comment = comment.created
 
-            if(comment.author == "[deleted]"  or comment.body == "[removed]"):
+            comment_karma += comment.score
+
+            if(comment.body == "[removed]" or comment.body == "[deleted]" or comment.body == None):
                 num_deleted += 1
+                archived_deleted += 1
                 continue
 
             sentiment_dict = analyzer.polarity_scores(comment.body)
             sentiment += sentiment_dict['compound']
-            comment_karma += comment.score
-
-            #sanitize input for easier parsing
+            
+            #sanitize text for easier parsing
             comment.body = comment.body.replace('\'', '')
             comment.body = comment.body.replace('/', '')
             comment.body = comment.body.replace('\\', '')
@@ -96,8 +112,6 @@ for sub in subs:
             for word in comment.body.split():
                 num_words += 1
                 num_characters += len(word)
-                if(word == 'isnt'):
-                    n_isnt += 1
                 if(word == 'cant'):
                     n_cant += 1
                 if(word == 'dont'):
@@ -106,37 +120,37 @@ for sub in subs:
                     n_everyone += 1
                 if(word == 'anyone'):
                     n_anyone += 1
-                if(word == 'wholesome'):
-                    n_wholesome += 1
                 if(word == 'happy'):
                     n_happy += 1
                 if(word == 'love'):
                     n_love += 1
 
-        percent_deleted.append(num_deleted / num_comments)
+        #claculating / appending features
+        percent_deleted.append(num_deleted / post.num_comments)
         avg_comment_karma.append(comment_karma / num_comments)
-
-        #dont count deleted comments since they have no text
-        num_comments -= num_deleted 
         total_post_karma.append(score)
         comment_upvote_rate.append(score / num_comments)
-        contains_isnt.append(n_isnt / num_comments)
+        comments_per_min.append(num_comments / ((last_comment - post_creation) / 60))
+        karma_per_min.append(score / ((last_comment - post_creation) / 60))
+        post_id.append(post.id)
+        target_label.append(post.subreddit)
+        
+        #dont count deleted comments in archive since they have no text
+        num_comments -= archived_deleted
+        
         contains_cant.append(n_cant / num_comments)
         contains_dont.append(n_dont / num_comments)
         contains_everyone.append(n_everyone / num_comments)
         contains_anyone.append(n_anyone / num_comments)
-        contains_wholesome.append(n_wholesome / num_comments)
         contains_happy.append(n_happy / num_comments)
         contains_love.append(n_love / num_comments)
-        comments_per_min.append(num_comments / ((last_comment - post_creation) / 60))
-        karma_per_min.append(score / ((last_comment - post_creation) / 60))
         avg_comment_words.append(num_words / num_comments)
         avg_word_len.append(num_characters / num_words)
-        post_id.append(post.id)
-        target_label.append(post.subreddit)
         avg_vader_sentiment.append(sentiment / num_comments)
+              
         i += 1
         print(i)
+        print()
             
 
 #write features to csv file
@@ -145,12 +159,10 @@ with open('postdata.csv', 'w', newline = '') as f:
                   'AvgComKarma',
                   'TotalKarma',
                   'ComUpRatio',
-                  'ContainsIsnt',
                   'ContainsCant',
                   'ContainsDont',
                   'ContainsEveryone',
                   'ContainsAnyone',
-                  'ContainsWholesome',
                   'ContainsHappy',
                   'ContainsLove',
                   'AvgComLen',
@@ -169,12 +181,10 @@ with open('postdata.csv', 'w', newline = '') as f:
                     'AvgComKarma' : avg_comment_karma[i],
                     'TotalKarma' : total_post_karma[i],
                     'ComUpRatio' :comment_upvote_rate[i],
-                    'ContainsIsnt' : contains_isnt[i],
                     'ContainsCant' : contains_cant[i],
                     'ContainsDont' : contains_dont[i],
                     'ContainsEveryone' : contains_everyone[i],
                     'ContainsAnyone' : contains_anyone[i],
-                    'ContainsWholesome' : contains_wholesome[i],
                     'ContainsHappy' : contains_happy[i],
                     'ContainsLove' : contains_love[i],
                     'AvgComLen' : avg_comment_words[i],
