@@ -1,0 +1,6 @@
+,precision,recall,f1-score,support
+gatekeeping,0.96,0.96,0.96,75.0
+gatesopencomeonin,0.96,0.96,0.96,75.0
+accuracy,0.96,0.96,0.96,0.96
+macro avg,0.96,0.96,0.96,150.0
+weighted avg,0.96,0.96,0.96,150.0
