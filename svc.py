@@ -16,43 +16,27 @@ pd.set_option('display.max_columns', 500)
 
 # Read in data
 df = pd.read_csv('data/gatekeeping_data.csv')
-features = np.delete(df.columns.values, [-1, -2])
+
+# Remove unwanted features
+#   TotalKarma - was too biased towards one sub-reddit; replaced with an average karma value
+#   post id - is just an id to look up posts in future; not relevant
+#   sub - target value
+to_remove = ['TotalKarma', 'post id', 'sub']
+features = df.columns.values[np.logical_not(np.in1d(df.columns.values, to_remove))]
 
 # Split inputs and outputs
 x = df[features]
 y = df['sub']
 
-#########
-#  PCA  #
-#########
-
-# # Standardize data for PCA
-# x_standardize = StandardScaler().fit_transform(x)
-#
-# # Run PCA to see how many features are required to explain 95% of variance
-# pca = PCA(0.95)
-# principal_components = pca.fit_transform(x_standardize)
-# principalDf = pd.DataFrame(data=principal_components,
-#                            columns=['PC {}'.format(i) for i in range(principal_components.shape[1])])
-#
-# finalDf = pd.concat([principalDf, df['sub']], axis=1)
-#
-# print('How much variance is explained?\n')
-# print(pca.explained_variance_ratio_)
-# print('\n')
-# print('Which features matter most?\n')
-# components = pd.DataFrame(data=abs(pca.components_), columns=features)
-# print(components)
-
-#########
-#  SVC  #
-#########
-
 # Split training/validation/testing data
 x_train, x_test, y_train, y_test = ms.train_test_split(x, y, test_size=0.3, random_state=42, stratify=y)
 x_valid, x_test, y_valid, y_test = ms.train_test_split(x_test, y_test, test_size=0.5, random_state=42, stratify=y_test)
 
+#########################
+# --------------------- #
 # --- Course Search --- #
+# --------------------- #
+#########################
 
 # Define search parameters
 C_coarse = np.logspace(-5, 15, 11, base=2)
@@ -151,7 +135,11 @@ conf_mat = met.confusion_matrix(y_valid, y_predict, labels=labels)
 conf_mat = pd.DataFrame(conf_mat, columns=['GK Predict', 'GOCOI Predict'], index=['GK True', 'GOCOI True'])
 print(conf_mat)
 
+#######################
+# ------------------- #
 # --- Fine Search --- #
+# ------------------- #
+#######################
 
 # Define search parameters
 C_fine = np.logspace(0, 8, 33, base=2)
@@ -204,9 +192,11 @@ conf_mat = met.confusion_matrix(y_valid, y_predict, labels=labels)
 conf_mat = pd.DataFrame(conf_mat, columns=['GK Predict', 'GOCON Predict'], index=['GK True', 'GOCON True'])
 print(conf_mat)
 
-##############
-#  Plotting  #
-##############
+####################
+# ---------------- #
+# --- Plotting --- #
+# ---------------- #
+####################
 
 # --- Linear Coarse Plots --- #
 
@@ -217,7 +207,7 @@ for ax, (key, val) in zip(axes_1, data_course['Linear'].items()):
     ax.set_ylabel(key.capitalize())
     ax.set_xscale('log')
 
-fig_1.suptitle('Linear Kernel Scores versus C')
+fig_1.suptitle('Linear Kernel Scores vs. C')
 plt.tight_layout()
 
 # --- Polynomial Coarse Contours --- #
@@ -234,10 +224,10 @@ for ax, (key, val) in zip(axes_2, data_course['Polynomial'].items()):
     ax.set_ylabel('Degree')
     ax.set_xscale('log')
 
-fig_2.suptitle('Polynomial Kernel Scores versus Degree and C')
+fig_2.suptitle('Polynomial Kernel Scores vs. Degree and C')
 plt.tight_layout()
 
-# --- RBF Course Contours --- #
+# --- RBF Coarse Contours --- #
 
 X, Y = np.meshgrid(C_coarse, gamma_coarse)
 
@@ -252,7 +242,7 @@ for ax, (key, val) in zip(axes_3, data_course['RBF'].items()):
     ax.set_xscale('log')
     ax.set_yscale('log')
 
-fig_3.suptitle('RBF Kernel Scores versus Gamma and C')
+fig_3.suptitle('RBF Kernel Scores vs. Gamma and C')
 plt.tight_layout()
 
 # --- RBF Fine Contours --- #
@@ -271,14 +261,19 @@ for ax, (key, val) in zip(axes_4, data_fine.items()):
     ax.set_xscale('log')
     ax.set_yscale('log')
 
-fig_4.suptitle('RBF Kernel Scores versus Gamma and C')
+fig_4.suptitle('RBF Kernel Scores vs. Gamma and C')
 plt.tight_layout()
 
-plt.show()
+fig_1.savefig('results/linear_grid_coarse.png')
+fig_2.savefig('results/poly_grid_coarse.png')
+fig_3.savefig('results/rbf_grid_coarse.png')
+fig_4.savefig('results/rbf_grid_fine.png')
 
-################
-#  Final Test  #
-################
+######################
+# ------------------ #
+# --- Final Test --- #
+# ------------------ #
+######################
 
 # Combine training and validation sets into a complete training set
 x_train = pd.concat([x_train, x_valid], axis=0)
