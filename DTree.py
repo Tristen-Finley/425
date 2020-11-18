@@ -13,8 +13,6 @@ from sklearn.metrics import plot_confusion_matrix
 
 data = pd.read_csv('Revised Dataset 425.csv')
 
-iris = datasets.load_iris()
-print(iris.target_names)
 del data['post id']
 
 Y = data['sub']
