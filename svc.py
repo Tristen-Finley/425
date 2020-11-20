@@ -142,8 +142,8 @@ print(conf_mat)
 #######################
 
 # Define search parameters
-C_fine = np.logspace(0, 8, 33, base=2)
-gamma_fine = np.logspace(-10, -3, 29, base=2)
+C_fine = list(np.arange(clf.best_params_['svc__C'] - 10, clf.best_params_['svc__C'] + 10))
+gamma_fine = list(np.arange(clf.best_params_['svc__gamma'] - (clf.best_params_['svc__gamma'] / 2),clf.best_params_['svc__gamma'] + (clf.best_params_['svc__gamma'] / 2), (clf.best_params_['svc__gamma'] / 20))) 
 param_grid = {
     'svc__kernel': ['rbf'],
     'svc__gamma': gamma_fine,
